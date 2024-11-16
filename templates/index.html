@@ -1,0 +1,172 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Audio Mixer</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f0f0f0;
+        }
+        
+        .container {
+            background-color: white;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 0 10px rgba(0,0,0,0.1);
+        }
+        
+        .track-container {
+            margin-bottom: 15px;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+        }
+        
+        .volume-slider {
+            width: 200px;
+        }
+        
+        button {
+            background-color: #4CAF50;
+            color: white;
+            padding: 10px 20px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            margin: 5px;
+        }
+        
+        button:hover {
+            background-color: #45a049;
+        }
+        
+        #addTrack {
+            background-color: #008CBA;
+        }
+        
+        .controls {
+            margin-top: 20px;
+        }
+
+        .volume-label {
+            display: inline-block;
+            width: 80px;
+        }
+
+        .remove-track {
+            background-color: #f44336;
+            padding: 5px 10px;
+            margin-left: 10px;
+        }.volume-slider {
+            width: 200px;
+            margin: 0 10px;
+        }
+    </style>
+</head>
+</style>
+</head>
+<body>
+    <div class="container">
+        <h1>Audio Mixer</h1>
+        
+        <form id="mixerForm" method="POST" enctype="multipart/form-data">
+            <div id="tracks">
+                <div class="track-container">
+                    <input type="file" name="audio_files" accept="audio/*" required>
+                    <div>
+                        <span class="volume-label">Volume:</span>
+                        <input type="range" name="volume" class="volume-slider" min="0" max="100" value="50">
+                        <span class="volume-value">0 dB</span>
+                    </div>
+                    <audio controls class="audio-preview"></audio>
+                    <button type="button" class="remove-track">Remove</button>
+                </div>
+            </div>
+            
+            <div class="controls">
+                <button type="button" id="addTrack">Add Track</button>
+                <button type="button" id="previewMix">Preview Mix</button>
+                <button type="submit">Render Mix</button>
+            </div>
+        </form>
+    </div>
+
+    <script>
+        function convertToDb(value) {
+            // Преобразование значения ползунка (0-100) в дБ (-30 до +30)
+            return ((value - 50) * 0.6).toFixed(1);
+        }
+
+        function convertToGain(value) {
+            // Преобразование значения ползунка (0-100) в коэффициент усиления (0-2)
+            const db = convertToDb(value);
+            return Math.pow(10, db / 20);
+        }
+
+        function updateVolume(container) {
+            const audio = container.querySelector('audio');
+            const slider = container.querySelector('.volume-slider');
+            const volumeDisplay = container.querySelector('.volume-value');
+            
+            const db = convertToDb(slider.value);
+            const gain = convertToGain(slider.value);
+            
+            // Устанавливаем громкость аудио элемента
+            audio.volume = Math.min(gain, 1);  // Ограничиваем максимальную громкость в превью
+            volumeDisplay.textContent = `${db} dB`;
+        }
+
+        document.getElementById('addTrack').addEventListener('click', function() {
+            const trackContainer = document.querySelector('.track-container').cloneNode(true);
+            trackContainer.querySelector('input[type="file"]').value = '';
+            trackContainer.querySelector('audio').src = '';
+            trackContainer.querySelector('.volume-slider').value = 50;
+            updateVolume(trackContainer);
+            document.getElementById('tracks').appendChild(trackContainer);
+        });
+
+        document.getElementById('tracks').addEventListener('click', function(e) {
+            if (e.target.classList.contains('remove-track')) {
+                const tracksCount = document.querySelectorAll('.track-container').length;
+                if (tracksCount > 1) {
+                    e.target.closest('.track-container').remove();
+                }
+            }
+        });
+
+        document.getElementById('tracks').addEventListener('change', function(e) {
+            if (e.target.type === 'file') {
+                const container = e.target.closest('.track-container');
+                const audio = container.querySelector('audio');
+                const file = e.target.files[0];
+                if (file) {
+                    audio.src = URL.createObjectURL(file);
+                    updateVolume(container);
+                }
+            }
+        });
+
+        document.getElementById('tracks').addEventListener('input', function(e) {
+            if (e.target.type === 'range') {
+                const container = e.target.closest('.track-container');
+                updateVolume(container);
+            }
+        });
+
+        document.getElementById('previewMix').addEventListener('click', function() {
+            const containers = document.querySelectorAll('.track-container');
+            containers.forEach(container => {
+                const audio = container.querySelector('audio');
+                if (audio.src) {
+                    audio.currentTime = 0;
+                    audio.play();
+                    updateVolume(container);
+                }
+            });
+        });
+    </script>
+</body>
+</html>
